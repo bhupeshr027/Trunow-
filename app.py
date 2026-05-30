@@ -50,6 +50,11 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "trunow-secret-key-change-me")
 app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024
 
+
+@app.route("/health")
+def health_check():
+    return {"status": "ok"}, 200
+
 EMPLOYEE_SEED_DATA = [
     {"employee_id": "EMP001", "full_name": "Selvam", "username": "selvam", "password": "Selvam@2026", "bank_account_no": "717388828", "ifsc_code": "IDIB000P076", "bank_name": "Indian Bank"},
     {"employee_id": "EMP002", "full_name": "Rajesh Sagar", "username": "rajesh.sagar", "password": "Rajesh@2026", "bank_account_no": "62105169140", "ifsc_code": "SBIN0008026", "bank_name": "SBI"},
