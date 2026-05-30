@@ -11,6 +11,7 @@
             <a class="nav-link {% if request.endpoint == 'employee_dashboard' %}active{% endif %}" href="{{ url_for('employee_dashboard') }}"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
             <a class="nav-link {% if request.endpoint == 'employee_profile' %}active{% endif %}" href="{{ url_for('employee_profile') }}"><i class="bi bi-person-badge me-2"></i>Profile</a>
             <a class="nav-link {% if request.endpoint == 'employee_attendance' %}active{% endif %}" href="{{ url_for('employee_attendance') }}"><i class="bi bi-clock-history me-2"></i>Attendance</a>
+            <a class="nav-link {% if request.endpoint == 'employee_leave' %}active{% endif %}" href="{{ url_for('employee_leave') }}"><i class="bi bi-calendar2-check me-2"></i>Leave</a>
             <a class="nav-link {% if request.endpoint == 'employee_tasks' %}active{% endif %}" href="{{ url_for('employee_tasks') }}"><i class="bi bi-list-task me-2"></i>My Tasks</a>
             <a class="nav-link" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-left me-2"></i>Logout</a>
         </nav>

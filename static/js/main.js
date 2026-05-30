@@ -5,6 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const longitudeInput = attendanceForm.querySelector('input[name="longitude"]');
         const locationInput = attendanceForm.querySelector('input[name="location_text"]');
         const statusLabel = document.querySelector("[data-location-status]");
+        const photoInput = attendanceForm.querySelector("[data-photo-input]");
+        const photoPreview = attendanceForm.querySelector("[data-photo-preview]");
 
         const setStatus = (message, isError = false) => {
             if (!statusLabel) return;
@@ -42,6 +44,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const locationButton = document.querySelector("[data-get-location]");
         if (locationButton) {
             locationButton.addEventListener("click", getLocation);
+        }
+
+        if (photoInput && photoPreview) {
+            photoInput.addEventListener("change", () => {
+                const [file] = photoInput.files || [];
+                if (!file) {
+                    photoPreview.src = "";
+                    photoPreview.classList.add("d-none");
+                    return;
+                }
+                photoPreview.src = URL.createObjectURL(file);
+                photoPreview.classList.remove("d-none");
+            });
         }
         getLocation();
     }

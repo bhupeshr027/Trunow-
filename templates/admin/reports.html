@@ -1,39 +1,105 @@
 {% extends "admin/layout.html" %}
 {% block title %}Reports | TRUNOW{% endblock %}
 {% block admin_content %}
-<div class="row g-4">
-    <div class="col-xl-4">
-        <div class="table-card h-100">
-            <h5 class="mb-3">Attendance Summary</h5>
-            <canvas id="attendanceChart" height="240"></canvas>
+<div class="soft-card p-4 mb-4">
+    <form method="get" class="row g-4 align-items-end reports-filter-row">
+        <div class="col-md-6 col-xl-3">
+            <label class="form-label">Start Date</label>
+            <input type="date" class="form-control" name="start_date" value="{{ selected_start_date }}">
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <label class="form-label">End Date</label>
+            <input type="date" class="form-control" name="end_date" value="{{ selected_end_date }}">
+        </div>
+        <div class="col-md-6 col-xl-2">
+            <label class="form-label">Month</label>
+            <select class="form-select" name="month">
+                {% for value, label in month_options %}
+                <option value="{{ value }}" {% if selected_month == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6 col-xl-2">
+            <label class="form-label">Year</label>
+            <input type="number" class="form-control" name="year" value="{{ selected_year }}" min="2024" max="2100">
+        </div>
+        <div class="col-12 col-xl-2">
+            <div class="d-flex flex-column flex-md-row flex-xl-column gap-3 reports-filter-actions">
+                <button class="btn btn-primary">Generate Report</button>
+                <button class="btn btn-outline-primary" name="export" value="excel">Export Excel</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="table-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="mb-1">Monthly Salary & Attendance Report</h5>
+            <p class="mini-muted mb-0">Includes compulsory morning attendance, optional night shift, Sunday compensation, and salary cut calculation.</p>
         </div>
     </div>
-    <div class="col-xl-4">
-        <div class="table-card h-100">
-            <h5 class="mb-3">Task Completion Summary</h5>
-            <canvas id="taskChart" height="240"></canvas>
-        </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="table-card h-100">
-            <h5 class="mb-3">Stock Summary</h5>
-            <canvas id="stockChart" height="240"></canvas>
-        </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Month</th>
+                    <th>Working Days</th>
+                    <th>Present</th>
+                    <th>Absent</th>
+                    <th>Leave</th>
+                    <th>Allowed Leave</th>
+                    <th>Sunday Work</th>
+                    <th>Comp Leave</th>
+                    <th>Salary Cut Days</th>
+                    <th>Per Day Salary</th>
+                    <th>Cut Amount</th>
+                    <th>Final Salary</th>
+                    <th>Night Shifts</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in report_rows %}
+                <tr>
+                    <td>
+                        <div class="fw-semibold">{{ row.employee_name }}</div>
+                        <div class="mini-muted">{{ row.employee_id }} | {{ row.department }}</div>
+                    </td>
+                    <td>{{ row.month_label }}</td>
+                    <td>{{ row.total_working_days }}</td>
+                    <td>{{ row.present_days }}</td>
+                    <td>{{ row.absent_days }}</td>
+                    <td>{{ row.leave_days }}</td>
+                    <td>{{ row.allowed_leave }}</td>
+                    <td>{{ row.sunday_work_count }}</td>
+                    <td>{{ row.compensated_leave_count }}</td>
+                    <td>{{ row.salary_cut_days }}</td>
+                    <td>{{ row.per_day_salary }}</td>
+                    <td>{{ row.salary_cut_amount }}</td>
+                    <td>{{ row.final_salary }}</td>
+                    <td>{{ row.night_shift_count }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="14" class="empty-state">No report rows generated.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
-<div class="row g-4 mt-1">
+<div class="row g-4">
     <div class="col-lg-6">
         <div class="table-card">
-            <h5 class="mb-3">Attendance Data</h5>
+            <h5 class="mb-3">Task Completion Summary</h5>
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <thead>
-                        <tr><th>Employee</th><th>Days Marked</th></tr>
+                        <tr><th>Status</th><th>Total</th></tr>
                     </thead>
                     <tbody>
-                        {% for row in attendance_summary %}
-                        <tr><td>{{ row.full_name }}</td><td>{{ row.days_marked }}</td></tr>
+                        {% for row in task_summary %}
+                        <tr><td>{{ row.status }}</td><td>{{ row.total }}</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -58,44 +124,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-    new Chart(document.getElementById("attendanceChart"), {
-        type: "bar",
-        data: {
-            labels: {{ attendance_summary | map(attribute='full_name') | list | tojson }},
-            datasets: [{
-                label: "Days Marked",
-                data: {{ attendance_summary | map(attribute='days_marked') | list | tojson }},
-                backgroundColor: "#1f5eff"
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-
-    new Chart(document.getElementById("taskChart"), {
-        type: "doughnut",
-        data: {
-            labels: {{ task_summary | map(attribute='status') | list | tojson }},
-            datasets: [{
-                data: {{ task_summary | map(attribute='total') | list | tojson }},
-                backgroundColor: ["#f4b740", "#1f5eff", "#1d9d74"]
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-
-    new Chart(document.getElementById("stockChart"), {
-        type: "polarArea",
-        data: {
-            labels: {{ stock_summary | map(attribute='category') | list | tojson }},
-            datasets: [{
-                data: {{ stock_summary | map(attribute='total_quantity') | list | tojson }},
-                backgroundColor: ["#0d1b4c", "#1f5eff", "#87a7ff", "#c5d6ff", "#8bd6be"]
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-</script>
 {% endblock %}

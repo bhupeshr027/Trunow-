@@ -1,0 +1,82 @@
+{% extends "employee/layout.html" %}
+{% block title %}Leave | TRUNOW{% endblock %}
+{% block employee_content %}
+<div class="row g-4 mb-5 employee-attendance-summary">
+    {% for title, value, badge in [
+        ('Leave Days', month_summary.leave_days, 'badge-pending'),
+        ('Comp Leave Balance', compensation_balance, 'badge-comp'),
+        ('Pending Requests', pending_count, 'badge-progress'),
+        ('Approved Requests', approved_count, 'badge-present'),
+        ('Rejected Requests', rejected_count, 'badge-absent')
+    ] %}
+    <div class="col-md-6 col-xl-3">
+        <div class="dashboard-card">
+            <div class="text-secondary small">{{ title }}</div>
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <h3 class="mb-0">{{ value }}</h3>
+                <span class="badge-soft {{ badge }}">This Month</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row g-4">
+    <div class="col-xl-7">
+        <div class="soft-card p-4 h-100 employee-leave-card">
+            <h4 class="mb-2">Request Leave</h4>
+            <p class="mini-muted mb-4">Submit leave for admin approval. One leave per month is allowed before compensation and salary cut rules apply.</p>
+            <form method="post" class="row g-4 employee-leave-form">
+                <div class="col-md-6">
+                    <label class="form-label">Leave Date</label>
+                    <input type="date" class="form-control" name="leave_date" min="{{ today }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Leave Type</label>
+                    <select class="form-select" name="leave_type" required>
+                        {% for option in ['Casual Leave', 'Sick Leave', 'Emergency Leave', 'Other'] %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Reason</label>
+                    <textarea class="form-control" rows="4" name="leave_reason" required></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Remarks</label>
+                    <input class="form-control" name="leave_remarks" placeholder="Optional remarks">
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary">Submit Leave Request</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="table-card employee-history-card h-100">
+            <h5 class="mb-3">Leave Requests</h5>
+            {% for row in leave_requests %}
+            <div class="soft-card mb-3">
+                <div class="d-flex justify-content-between align-items-start gap-3">
+                    <div>
+                        <div class="fw-semibold">{{ row.leave_date }}</div>
+                        <div class="mini-muted">{{ row.leave_type }}</div>
+                        <div class="mini-muted mt-2">{{ row.reason }}</div>
+                        {% if row.remarks %}
+                        <div class="mini-muted mt-2">Remarks: {{ row.remarks }}</div>
+                        {% endif %}
+                        {% if row.admin_remarks %}
+                        <div class="mini-muted mt-2">Admin: {{ row.admin_remarks }}</div>
+                        {% endif %}
+                    </div>
+                    <span class="badge-soft {{ 'badge-pending' if row.status == 'Pending' else ('badge-present' if row.status == 'Approved' else 'badge-absent') }}">{{ row.status }}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">No leave requests submitted.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

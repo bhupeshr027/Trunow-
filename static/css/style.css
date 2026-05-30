@@ -398,6 +398,11 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--royal);
 }
 
+.badge-comp {
+    background: rgba(124, 58, 237, 0.14);
+    color: #6d28d9;
+}
+
 .badge-completed,
 .badge-present,
 .badge-available {
@@ -546,6 +551,16 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--slate);
 }
 
+.attendance-photo-preview {
+    width: 100%;
+    max-width: 220px;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: #eef3fb;
+}
+
 .empty-state {
     padding: 2.5rem 1rem;
     text-align: center;
@@ -555,6 +570,101 @@ h1, h2, h3, h4, h5, h6 {
 .contact-list p,
 .contact-list li {
     color: var(--slate);
+}
+
+.attendance-filter-row .form-label {
+    margin-bottom: 0.75rem;
+}
+
+.attendance-filter-row .form-control,
+.attendance-filter-row .form-select {
+    min-height: 74px;
+    padding: 1rem 1.1rem;
+}
+
+.attendance-filter-row .filter-compact-group {
+    min-width: 170px;
+}
+
+.attendance-filter-row .filter-compact-group .form-select {
+    padding-left: 1.25rem;
+    padding-right: 2.75rem;
+}
+
+.attendance-filter-actions .btn {
+    min-width: 132px;
+    min-height: 56px;
+}
+
+.attendance-register-table {
+    min-width: 1500px;
+}
+
+.attendance-register-table thead th {
+    padding: 1.15rem 1rem;
+    white-space: nowrap;
+}
+
+.attendance-register-table tbody td {
+    padding: 1.6rem 1rem;
+}
+
+.reports-filter-row .form-label {
+    margin-bottom: 0.75rem;
+}
+
+.reports-filter-row .form-control,
+.reports-filter-row .form-select {
+    min-height: 74px;
+    padding: 1rem 1.1rem;
+}
+
+.reports-filter-actions .btn {
+    min-width: 170px;
+    min-height: 56px;
+}
+
+.employee-attendance-summary .dashboard-card {
+    padding: 1.75rem;
+    min-height: 180px;
+}
+
+.employee-attendance-summary .badge-soft {
+    padding: 0.8rem 1.15rem;
+}
+
+.employee-attendance-card,
+.employee-leave-card,
+.employee-history-card {
+    padding: 2rem !important;
+}
+
+.employee-attendance-form .form-label,
+.employee-leave-form .form-label {
+    margin-bottom: 0.8rem;
+}
+
+.employee-attendance-form .form-control,
+.employee-attendance-form .form-select,
+.employee-leave-form .form-control,
+.employee-leave-form .form-select,
+.employee-leave-form textarea {
+    min-height: 72px;
+    padding: 1rem 1.1rem;
+}
+
+.employee-leave-form textarea {
+    min-height: 160px;
+}
+
+.employee-attendance-actions .btn,
+.employee-leave-form .btn {
+    min-width: 190px;
+    min-height: 58px;
+}
+
+.employee-history-card .soft-card {
+    padding: 1.4rem;
 }
 
 @media (max-width: 991.98px) {
@@ -583,6 +693,11 @@ h1, h2, h3, h4, h5, h6 {
 
     .portal-content {
         padding: 1rem;
+    }
+
+    .employee-attendance-actions .btn,
+    .employee-leave-form .btn {
+        width: 100%;
     }
 
     .about-visual-card,

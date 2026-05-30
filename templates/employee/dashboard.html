@@ -7,7 +7,7 @@
             <div class="d-flex justify-content-between align-items-start">
                 <div>
                     <div class="text-secondary small">Attendance Today</div>
-                    <h4 class="fw-bold mt-2 mb-0">{{ attendance_today.status if attendance_today else 'Pending' }}</h4>
+                    <h4 class="fw-bold mt-2 mb-0">{{ attendance_status }}</h4>
                 </div>
                 <div class="icon-wrap"><i class="bi bi-fingerprint"></i></div>
             </div>
@@ -53,6 +53,8 @@
             <div class="mb-3">{{ employee.phone }}</div>
             <div class="mini-muted">Email</div>
             <div class="mb-3">{{ employee.email }}</div>
+            <div class="mini-muted">Monthly Salary / Cut</div>
+            <div class="mb-3">{{ month_summary.monthly_salary }} / {{ month_summary.salary_cut_amount }}</div>
             <a href="{{ url_for('employee_profile') }}" class="btn btn-outline-primary">Update Profile Photo</a>
         </div>
     </div>

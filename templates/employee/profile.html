@@ -26,6 +26,30 @@
                     <label class="form-label">Email</label>
                     <input class="form-control" value="{{ employee.email }}" readonly>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label">Role</label>
+                    <input class="form-control" value="{{ employee.role or employee.designation }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Monthly Salary</label>
+                    <input class="form-control" value="{{ employee.monthly_salary or 0 }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Night Shift Access</label>
+                    <input class="form-control" value="{{ 'Enabled' if employee.night_shift_allowed else 'Disabled' }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Bank A/c No</label>
+                    <input class="form-control" value="{{ employee.bank_account_no or '' }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">IFSC Code</label>
+                    <input class="form-control" value="{{ employee.ifsc_code or '' }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Bank Name</label>
+                    <input class="form-control" value="{{ employee.bank_name or '' }}" readonly>
+                </div>
             </div>
             <form method="post" enctype="multipart/form-data" class="mt-4">
                 <label class="form-label">Update Profile Photo</label>

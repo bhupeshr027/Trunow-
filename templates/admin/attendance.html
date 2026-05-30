@@ -1,22 +1,46 @@
 {% extends "admin/layout.html" %}
 {% block title %}Attendance | TRUNOW{% endblock %}
 {% block admin_content %}
-<div class="soft-card p-3 mb-4">
-    <form method="get" class="row g-3 align-items-end">
-        <div class="col-md-3">
-            <label class="form-label">Date</label>
-            <input type="date" class="form-control" name="date" value="{{ selected_date }}">
+<div class="row g-4 mb-4">
+    {% for title, value, badge in [
+        ('Total Employees', total_employees, 'badge-progress'),
+        ('Present Today', present_today, 'badge-present'),
+        ('Absent Today', absent_today, 'badge-absent'),
+        ('Leave Today', leave_today, 'badge-pending'),
+        ('Night Shift Today', night_shift_today, 'badge-progress'),
+        ('Sunday Work Today', sunday_work_today, 'badge-comp')
+    ] %}
+    <div class="col-md-6 col-xl-2">
+        <div class="dashboard-card">
+            <div class="text-secondary small">{{ title }}</div>
+            <div class="d-flex justify-content-center align-items-center mt-4">
+                <h3 class="mb-0 text-center">{{ value }}</h3>
+            </div>
         </div>
-        <div class="col-md-3">
+    </div>
+    {% endfor %}
+</div>
+
+<div class="soft-card p-4 mb-4">
+    <form method="get" class="row g-4 align-items-end attendance-filter-row">
+        <div class="col-md-6 col-xl-2">
+            <label class="form-label">From Date</label>
+            <input type="date" class="form-control" name="from_date" value="{{ selected_from_date }}">
+        </div>
+        <div class="col-md-6 col-xl-2">
+            <label class="form-label">To Date</label>
+            <input type="date" class="form-control" name="to_date" value="{{ selected_to_date }}">
+        </div>
+        <div class="col-md-6 col-xl-2">
             <label class="form-label">Employee</label>
-            <select class="form-select" name="employee">
+            <select class="form-select" name="employee_id">
                 <option value="">All employees</option>
                 {% for employee in employees %}
                 <option value="{{ employee.id }}" {% if selected_employee == employee.id|string %}selected{% endif %}>{{ employee.full_name }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-6 col-xl-2">
             <label class="form-label">Department</label>
             <select class="form-select" name="department">
                 <option value="">All departments</option>
@@ -25,25 +49,192 @@
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3 d-flex gap-2">
-            <button class="btn btn-primary flex-grow-1">Filter</button>
-            <button class="btn btn-outline-primary" name="export" value="csv">Export CSV</button>
+        <div class="col-md-4 col-xl-1 filter-compact-group">
+            <label class="form-label">Status</label>
+            <select class="form-select" name="status">
+                <option value="">All</option>
+                {% for code in ['P', 'AB', 'L', 'SUN-WORK', 'COMP'] %}
+                <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 col-xl-1 filter-compact-group">
+            <label class="form-label">Morning</label>
+            <select class="form-select" name="morning_shift">
+                <option value="">All</option>
+                {% for option in ['Present', 'Absent', 'Leave'] %}
+                <option value="{{ option }}" {% if selected_morning_shift == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 col-xl-1 filter-compact-group">
+            <label class="form-label">Night</label>
+            <select class="form-select" name="night_shift">
+                <option value="">All</option>
+                {% for option in ['Present', 'Absent', 'Not Applicable'] %}
+                <option value="{{ option }}" {% if selected_night_shift == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-12">
+            <div class="d-flex flex-column flex-lg-row gap-3 justify-content-end attendance-filter-actions">
+                <button class="btn btn-primary px-4">Filter</button>
+                <button class="btn btn-outline-primary px-4" name="export" value="excel">Export Excel</button>
+            </div>
         </div>
     </form>
 </div>
 
+<div class="row g-4 mb-4">
+    <div class="col-xl-7">
+        <div class="soft-card p-4 h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="mb-1">Manual Attendance Entry</h5>
+                    <p class="mini-muted mb-0">Add or correct morning, leave, Sunday work, and optional night shift records.</p>
+                </div>
+            </div>
+            <form method="post" class="row g-3">
+                <input type="hidden" name="form_action" value="save_attendance">
+                <div class="col-md-6">
+                    <label class="form-label">Employee</label>
+                    <select class="form-select" name="employee_id" required>
+                        <option value="">Select employee</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}">{{ employee.full_name }} | {{ employee.department }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Date</label>
+                    <input type="date" class="form-control" name="attendance_date" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Morning Shift</label>
+                    <select class="form-select" name="morning_status">
+                        {% for option in ['Present', 'Absent', 'Leave'] %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Night Shift</label>
+                    <select class="form-select" name="night_status">
+                        {% for option in ['Not Applicable', 'Present', 'Absent'] %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Approval</label>
+                    <select class="form-select" name="approval_status">
+                        {% for option in ['Approved', 'Pending', 'Rejected'] %}
+                        <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Check In</label>
+                    <input type="time" class="form-control" name="check_in_time">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Check Out</label>
+                    <input type="time" class="form-control" name="check_out_time">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Night In</label>
+                    <input type="time" class="form-control" name="night_check_in_time">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Night Out</label>
+                    <input type="time" class="form-control" name="night_check_out_time">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Location</label>
+                    <input class="form-control" name="location_text" placeholder="Site / location">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Remarks</label>
+                    <input class="form-control" name="remarks" placeholder="Add remarks if needed">
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4 pt-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="isSundayWork" name="is_sunday_work">
+                        <label class="form-check-label" for="isSundayWork">Sunday Work</label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-check mt-4 pt-2">
+                        <input class="form-check-input" type="checkbox" value="1" id="isCompLeave" name="is_compensated_leave">
+                        <label class="form-check-label" for="isCompLeave">Comp Leave</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary">Save Attendance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="col-xl-5">
+        <div class="table-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Pending / Recent Leave Requests</h5>
+                <span class="mini-muted">Admin review</span>
+            </div>
+            <div class="leave-request-stack">
+                {% for request_row in pending_leave_requests %}
+                <div class="soft-card mb-3">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <div class="fw-semibold">{{ request_row.full_name }}</div>
+                            <div class="mini-muted">{{ request_row.emp_code }} | {{ request_row.leave_date }} | {{ request_row.leave_type }}</div>
+                            <div class="mini-muted mt-2">{{ request_row.reason }}</div>
+                            {% if request_row.admin_remarks %}
+                            <div class="mini-muted mt-2">Admin: {{ request_row.admin_remarks }}</div>
+                            {% endif %}
+                        </div>
+                        <span class="badge-soft {{ 'badge-pending' if request_row.status == 'Pending' else ('badge-present' if request_row.status == 'Approved' else 'badge-absent') }}">{{ request_row.status }}</span>
+                    </div>
+                    <form method="post" class="row g-2 mt-3">
+                        <input type="hidden" name="form_action" value="review_leave">
+                        <input type="hidden" name="leave_request_id" value="{{ request_row.id }}">
+                        <div class="col-sm-8">
+                            <input class="form-control" name="admin_remarks" placeholder="Admin remarks">
+                        </div>
+                        <div class="col-sm-4 d-flex gap-2">
+                            <button class="btn btn-primary flex-grow-1" name="decision" value="Approved">Approve</button>
+                            <button class="btn btn-outline-danger flex-grow-1" name="decision" value="Rejected">Reject</button>
+                        </div>
+                    </form>
+                </div>
+                {% else %}
+                <div class="empty-state">No leave requests yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="table-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Attendance Register</h5>
+        <span class="mini-muted">Day-wise employee attendance with shift and approval tracking</span>
+    </div>
     <div class="table-responsive">
-        <table class="table align-middle mb-0">
+        <table class="table align-middle mb-0 attendance-register-table">
             <thead>
                 <tr>
                     <th>Employee</th>
                     <th>Date</th>
+                    <th>Morning</th>
+                    <th>Night</th>
                     <th>Clock In</th>
                     <th>Clock Out</th>
                     <th>Location</th>
                     <th>Photo</th>
                     <th>Status</th>
+                    <th>Approval</th>
+                    <th>Remarks</th>
                 </tr>
             </thead>
             <tbody>
@@ -53,9 +244,20 @@
                         <div class="fw-semibold">{{ row.full_name }}</div>
                         <div class="mini-muted">{{ row.emp_code }} | {{ row.department }}</div>
                     </td>
-                    <td>{{ row.date }}</td>
-                    <td>{{ row.clock_in_time or '-' }}</td>
-                    <td>{{ row.clock_out_time or '-' }}</td>
+                    <td>
+                        <div>{{ row.date }}</div>
+                        <div class="mini-muted">{{ row.day_name }}</div>
+                    </td>
+                    <td>{{ row.morning_status or '-' }}</td>
+                    <td>{{ row.night_status or '-' }}</td>
+                    <td>
+                        <div>{{ row.clock_in_time or '-' }}</div>
+                        <div class="mini-muted">{{ row.night_check_in_time or 'Night: -' }}</div>
+                    </td>
+                    <td>
+                        <div>{{ row.clock_out_time or '-' }}</div>
+                        <div class="mini-muted">{{ row.night_check_out_time or 'Night: -' }}</div>
+                    </td>
                     <td>
                         <div>{{ row.location_text or '-' }}</div>
                         <div class="mini-muted">{{ row.latitude or '-' }}, {{ row.longitude or '-' }}</div>
@@ -67,10 +269,32 @@
                         <span class="mini-muted">No photo</span>
                         {% endif %}
                     </td>
-                    <td><span class="badge-soft badge-present">{{ row.status }}</span></td>
+                    <td>
+                        <span class="badge-soft {{ row.status_badge }}">{{ row.status_code }}</span>
+                    </td>
+                    <td>
+                        <form method="post" class="d-flex flex-column gap-2">
+                            <input type="hidden" name="form_action" value="review_attendance">
+                            <input type="hidden" name="attendance_id" value="{{ row.id }}">
+                            <select class="form-select form-select-sm" name="approval_status">
+                                {% for option in ['Pending', 'Approved', 'Rejected'] %}
+                                <option value="{{ option }}" {% if row.approval_status == option %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary">Update</button>
+                        </form>
+                    </td>
+                    <td>
+                        <div>{{ row.remarks or '-' }}</div>
+                        {% if row.is_sunday_work %}
+                        <div class="mini-muted">Sunday work approved</div>
+                        {% elif row.is_compensated_leave %}
+                        <div class="mini-muted">Leave adjusted using Sunday credit</div>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7" class="empty-state">No attendance records found.</td></tr>
+                <tr><td colspan="11" class="empty-state">No attendance records found.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
