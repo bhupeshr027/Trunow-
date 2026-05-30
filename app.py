@@ -56,21 +56,291 @@ def health_check():
     return {"status": "ok"}, 200
 
 EMPLOYEE_SEED_DATA = [
-    {"employee_id": "EMP001", "full_name": "Selvam", "username": "selvam", "password": "Selvam@2026", "bank_account_no": "717388828", "ifsc_code": "IDIB000P076", "bank_name": "Indian Bank"},
-    {"employee_id": "EMP002", "full_name": "Rajesh Sagar", "username": "rajesh.sagar", "password": "Rajesh@2026", "bank_account_no": "62105169140", "ifsc_code": "SBIN0008026", "bank_name": "SBI"},
-    {"employee_id": "EMP003", "full_name": "Rajaram", "username": "rajaram", "password": "Rajaram@2026", "bank_account_no": "50100250797924", "ifsc_code": "HDFC0000024", "bank_name": "HDFC"},
-    {"employee_id": "EMP004", "full_name": "Vikraman", "username": "vikraman", "password": "Vikraman@2026", "bank_account_no": "50100412610221", "ifsc_code": "HDFC0001854", "bank_name": "HDFC"},
-    {"employee_id": "EMP005", "full_name": "Bikesh", "username": "bikesh", "password": "Bikesh@2026", "bank_account_no": "32338835940", "ifsc_code": "SBIN0012056", "bank_name": "SBI"},
-    {"employee_id": "EMP006", "full_name": "Kavindra", "username": "kavindra", "password": "Kavindra@2026", "bank_account_no": "921010055859379", "ifsc_code": "UTIB0000110", "bank_name": "Axis Bank"},
-    {"employee_id": "EMP007", "full_name": "Balasudhan", "username": "balasudhan", "password": "Bala@2026", "bank_account_no": "6923026029", "ifsc_code": "IDIB000K269", "bank_name": "Indian Bank"},
-    {"employee_id": "EMP008", "full_name": "Rajasekar", "username": "rajasekar", "password": "Rajasekar@2026", "bank_account_no": "6733615792", "ifsc_code": "IDIB000K249", "bank_name": "Indian Bank"},
-    {"employee_id": "EMP009", "full_name": "Vetrivel", "username": "vetrivel", "password": "Vetrivel@2026", "bank_account_no": "110045993544", "ifsc_code": "CNRB0001669", "bank_name": "Canara Bank"},
-    {"employee_id": "EMP010", "full_name": "Jagdish", "username": "jagdish", "password": "Jagdish@2026", "bank_account_no": "643401050639", "ifsc_code": "ICIC0006434", "bank_name": "ICIC Bank"},
-    {"employee_id": "EMP011", "full_name": "Mani Vannan", "username": "mani.vannan", "password": "Mani@2026", "bank_account_no": "00000035347537076", "ifsc_code": "SBIN0005582", "bank_name": "SBI Bank"},
-    {"employee_id": "EMP012", "full_name": "Mohanraj", "username": "mohanraj", "password": "Mohanraj@2026", "bank_account_no": "50100762115634", "ifsc_code": "HDFC0000232", "bank_name": "HDFC Bank"},
-    {"employee_id": "EMP013", "full_name": "Dinabaindhu Malik", "username": "dinabaindhu.malik", "password": "Dinabaindhu@2026", "bank_account_no": "35823747800", "ifsc_code": "SBIN0012054", "bank_name": "SBI Bank"},
-    {"employee_id": "EMP014", "full_name": "Aasath", "username": "aasath", "password": "Aasath@2026", "bank_account_no": "7748149459", "ifsc_code": "KKBK0000431", "bank_name": "Kotak Mahindra"},
-    {"employee_id": "EMP015", "full_name": "Pugazhenthi", "username": "pugazhenthi", "password": "Pugazhenthi@2026", "bank_account_no": "41853736374", "ifsc_code": "SBIN0017122", "bank_name": "SBI Bank"},
+    {
+        "employee_id": "EMP001",
+        "full_name": "Selvam",
+        "display_name": "Selvam",
+        "username": "selvam",
+        "password": "Selvam@2026",
+        "phone": "96771 11212",
+        "email": "Selvam@trunowindia.com",
+        "department": "Projects",
+        "designation": "Projects - Head",
+        "role": "Projects - Head",
+        "work_location": "Bangalore",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "717388828",
+        "ifsc_code": "IDIB000P076",
+        "bank_name": "Indian Bank",
+    },
+    {
+        "employee_id": "EMP002",
+        "full_name": "Rajesh Sagar",
+        "display_name": "Rajesh Sagar",
+        "username": "rajesh.sagar",
+        "password": "Rajesh@2026",
+        "phone": "97001 60005",
+        "email": "Rajeshsagar@trunowindia.com",
+        "department": "Projects",
+        "designation": "Projects - Head",
+        "role": "Projects - Head",
+        "work_location": "Hyderabad",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "62105169140",
+        "ifsc_code": "SBIN0008026",
+        "bank_name": "SBI",
+    },
+    {
+        "employee_id": "EMP003",
+        "full_name": "Rajaram D",
+        "display_name": "Rajaram D",
+        "username": "rajaram.d",
+        "password": "Rajaram@2026",
+        "phone": "80729 18241",
+        "email": "rajaram@trunowindia.com",
+        "department": "Accounts",
+        "designation": "Accounts Manager",
+        "role": "Accounts Manager",
+        "work_location": "Chennai",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "50100250797924",
+        "ifsc_code": "HDFC0000024",
+        "bank_name": "HDFC",
+    },
+    {
+        "employee_id": "EMP004",
+        "full_name": "Vikraman",
+        "display_name": "Vikraman",
+        "username": "vikraman",
+        "password": "Vikraman@2026",
+        "phone": "80123 45325",
+        "email": "m.vikramtan@hotmail.com",
+        "department": "Operations",
+        "designation": "Site Engineer",
+        "role": "Site Engineer",
+        "work_location": "Hosur",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "50100412610221",
+        "ifsc_code": "HDFC0001854",
+        "bank_name": "HDFC",
+    },
+    {
+        "employee_id": "EMP005",
+        "full_name": "Bikesh Das",
+        "display_name": "Bikesh Das",
+        "username": "bikesh.das",
+        "password": "Bikesh@2026",
+        "phone": "77498 04453",
+        "email": "bikash5793@gmail.com",
+        "department": "Operations",
+        "designation": "Site Engineer",
+        "role": "Site Engineer",
+        "work_location": "Bangalore",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "32338835940",
+        "ifsc_code": "SBIN0012056",
+        "bank_name": "SBI",
+    },
+    {
+        "employee_id": "EMP006",
+        "full_name": "Kavindra Kumar",
+        "display_name": "Kavindra Kumar",
+        "username": "kavindra.kumar",
+        "password": "Kavindra@2026",
+        "phone": "90970 46594",
+        "email": "kavindra828@gmail.com",
+        "department": "Operations",
+        "designation": "Site Engineer",
+        "role": "Site Engineer",
+        "work_location": "Delhi",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "921010055859379",
+        "ifsc_code": "UTIB0000110",
+        "bank_name": "Axis Bank",
+    },
+    {
+        "employee_id": "EMP007",
+        "full_name": "Balakrishnan E",
+        "display_name": "Balakrishnan E",
+        "username": "balakrishnan.e",
+        "password": "Bala@2026",
+        "phone": "95000 97130",
+        "email": "balasutha141983@gmail.com",
+        "department": "Operations",
+        "designation": "Site Supervisor",
+        "role": "Site Supervisor",
+        "work_location": "Chennai",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "",
+        "ifsc_code": "",
+        "bank_name": "",
+    },
+    {
+        "employee_id": "EMP008",
+        "full_name": "Rajasekar K",
+        "display_name": "Rajasekar K",
+        "username": "rajasekar.k",
+        "password": "Rajasekar@2026",
+        "phone": "99946 97876",
+        "email": "krajasekar58@gmail.com",
+        "department": "Network",
+        "designation": "Network Engineer",
+        "role": "Network Engineer",
+        "work_location": "Bangalore",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "6733615792",
+        "ifsc_code": "IDIB000K249",
+        "bank_name": "Indian Bank",
+    },
+    {
+        "employee_id": "EMP009",
+        "full_name": "Vetrivel S",
+        "display_name": "Vetrivel S",
+        "username": "vetrivel.s",
+        "password": "Vetrivel@2026",
+        "phone": "70947 44066",
+        "email": "supportchn@trunowindia.com",
+        "department": "Accounts",
+        "designation": "Account Executive",
+        "role": "Account Executive",
+        "work_location": "Chennai",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "110045993544",
+        "ifsc_code": "CNRB0001669",
+        "bank_name": "Canara Bank",
+    },
+    {
+        "employee_id": "EMP010",
+        "full_name": "Jagdish Vasudev Yadav",
+        "display_name": "Jagdish Vasudev Yadav",
+        "username": "jagdish.yadav",
+        "password": "Jagdish@2026",
+        "phone": "88503 75778",
+        "email": "jagdishnetwork@gmail.com",
+        "department": "Operations",
+        "designation": "Site Engineer",
+        "role": "Site Engineer",
+        "work_location": "Mumbai",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "643401050639",
+        "ifsc_code": "ICIC0006434",
+        "bank_name": "ICIC Bank",
+    },
+    {
+        "employee_id": "EMP011",
+        "full_name": "Mani Vannan",
+        "display_name": "Mani Vannan",
+        "username": "mani.vannan",
+        "password": "Mani@2026",
+        "phone": "80985 04129",
+        "email": "manirai893@gmail.com",
+        "department": "Network",
+        "designation": "Network Suppot Engineer",
+        "role": "Network Suppot Engineer",
+        "work_location": "Bangalore",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "00000035347537076",
+        "ifsc_code": "SBIN0005582",
+        "bank_name": "SBI Bank",
+    },
+    {
+        "employee_id": "EMP012",
+        "full_name": "Mohanraj",
+        "display_name": "Mohanraj",
+        "username": "mohanraj",
+        "password": "Mohanraj@2026",
+        "phone": "95668 59382",
+        "email": "mohanraj3300@gmail.com",
+        "department": "Network",
+        "designation": "Network Engineer",
+        "role": "Network Engineer",
+        "work_location": "Bangalore",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "50100762115634",
+        "ifsc_code": "HDFC0000232",
+        "bank_name": "HDFC Bank",
+    },
+    {
+        "employee_id": "EMP013",
+        "full_name": "Dinabandhu Malik",
+        "display_name": "Dinabandhu Malik",
+        "username": "dinabandhu.malik",
+        "password": "Dinabandhu@2026",
+        "phone": "63700 21626",
+        "email": "malikdinabandhu560@gmail.com",
+        "department": "Operations",
+        "designation": "Technicin",
+        "role": "Technicin",
+        "work_location": "Mumbai",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "35823747800",
+        "ifsc_code": "SBIN0012054",
+        "bank_name": "SBI Bank",
+    },
+    {
+        "employee_id": "EMP014",
+        "full_name": "Asath M",
+        "display_name": "Asath M",
+        "username": "asath.m",
+        "password": "Asath@2026",
+        "phone": "90873 11348",
+        "email": "asathm45@gmail.com",
+        "department": "Operations",
+        "designation": "Technicin",
+        "role": "Technicin",
+        "work_location": "Bangalore",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "7748149459",
+        "ifsc_code": "KKBK0000431",
+        "bank_name": "Kotak Mahindra",
+    },
+    {
+        "employee_id": "EMP015",
+        "full_name": "Ayub Khan A",
+        "display_name": "Ayub Khan",
+        "username": "ayub.khan",
+        "password": "Ayub@2026",
+        "phone": "96775 55121",
+        "email": "Ayub@trunowindia.com",
+        "department": "Projects",
+        "designation": "Projects - Head",
+        "role": "Projects - Head",
+        "work_location": "Chennai",
+        "joined_on": "",
+        "manager_name": "",
+        "employment_type": "Full Time",
+        "bank_account_no": "",
+        "ifsc_code": "",
+        "bank_name": "",
+    },
 ]
 
 
@@ -133,15 +403,36 @@ def ensure_employee_bank_columns(db):
             db.execute(f"ALTER TABLE employees ADD COLUMN {column_name} {column_type}")
 
 
+def ensure_employee_profile_columns(db):
+    existing_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(employees)").fetchall()
+    }
+    required_columns = {
+        "work_location": "TEXT",
+        "joined_on": "TEXT",
+        "manager_name": "TEXT",
+        "employment_type": "TEXT",
+        "display_name": "TEXT",
+    }
+    for column_name, column_type in required_columns.items():
+        if column_name not in existing_columns:
+            db.execute(f"ALTER TABLE employees ADD COLUMN {column_name} {column_type}")
+
+
 def get_employee_form_data(form, include_password=False):
     fields = {
         "employee_id": form.get("employee_id", "").strip(),
         "full_name": form.get("full_name", "").strip(),
+        "display_name": form.get("display_name", "").strip(),
         "username": form.get("username", "").strip(),
         "phone": form.get("phone", "").strip(),
         "email": form.get("email", "").strip(),
         "department": form.get("department", "").strip(),
         "designation": form.get("designation", "").strip(),
+        "work_location": form.get("work_location", "").strip(),
+        "joined_on": form.get("joined_on", "").strip(),
+        "manager_name": form.get("manager_name", "").strip(),
+        "employment_type": form.get("employment_type", "").strip() or "Full Time",
         "status": form.get("status", "Active").strip(),
         "bank_account_no": form.get("bank_account_no", "").strip(),
         "ifsc_code": form.get("ifsc_code", "").strip().upper(),
@@ -185,6 +476,11 @@ def validate_employee_bank_fields(fields):
             return "Monthly Salary should be zero or greater."
     except ValueError:
         return "Monthly Salary should be a valid number."
+    if fields["joined_on"]:
+        try:
+            datetime.strptime(fields["joined_on"], "%Y-%m-%d")
+        except ValueError:
+            return "Joined On should be a valid date."
     return None
 
 
@@ -1172,11 +1468,16 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         employee_id TEXT NOT NULL UNIQUE,
         full_name TEXT NOT NULL,
+        display_name TEXT,
         username TEXT NOT NULL UNIQUE,
         phone TEXT NOT NULL UNIQUE,
         email TEXT NOT NULL UNIQUE,
         department TEXT NOT NULL,
         designation TEXT NOT NULL,
+        work_location TEXT,
+        joined_on TEXT,
+        manager_name TEXT,
+        employment_type TEXT,
         password_hash TEXT NOT NULL,
         profile_photo TEXT,
         monthly_salary REAL NOT NULL DEFAULT 0,
@@ -1284,6 +1585,7 @@ def init_db():
         db.row_factory = sqlite3.Row
         db.executescript(schema)
         ensure_employee_bank_columns(db)
+        ensure_employee_profile_columns(db)
         ensure_employee_attendance_columns(db)
         ensure_attendance_columns(db)
         migrate_attendance_data(db)
@@ -1332,8 +1634,16 @@ def init_db():
             db.execute(f"DELETE FROM employees WHERE id IN ({placeholders})", removed_ids)
 
         for index, employee in enumerate(EMPLOYEE_SEED_DATA, start=1):
-            phone = f"900000{index:04d}"
-            email = f"{employee['username']}@trunowindia.com"
+            phone = employee.get("phone") or f"900000{index:04d}"
+            email = employee.get("email") or f"{employee['username']}@trunowindia.com"
+            display_name = employee.get("display_name") or employee["full_name"]
+            department = employee.get("department") or "Operations"
+            designation = employee.get("designation") or employee.get("role") or "Employee"
+            role = employee.get("role") or designation
+            work_location = employee.get("work_location") or None
+            joined_on = employee.get("joined_on") or None
+            manager_name = employee.get("manager_name") or None
+            employment_type = employee.get("employment_type") or "Full Time"
             existing_employee = db.execute(
                 "SELECT id FROM employees WHERE employee_id = ?", (employee["employee_id"],)
             ).fetchone()
@@ -1341,20 +1651,25 @@ def init_db():
                 db.execute(
                     """
                     UPDATE employees
-                    SET employee_id = ?, full_name = ?, username = ?, phone = ?, email = ?, department = ?, designation = ?, password_hash = ?, status = ?, role = COALESCE(role, ?), monthly_salary = COALESCE(monthly_salary, 0), night_shift_allowed = COALESCE(night_shift_allowed, 0), bank_account_no = ?, ifsc_code = ?, bank_name = ?
+                    SET employee_id = ?, full_name = ?, display_name = ?, username = ?, phone = ?, email = ?, department = ?, designation = ?, work_location = ?, joined_on = ?, manager_name = ?, employment_type = ?, password_hash = ?, status = ?, role = ?, monthly_salary = COALESCE(monthly_salary, 0), night_shift_allowed = COALESCE(night_shift_allowed, 0), bank_account_no = ?, ifsc_code = ?, bank_name = ?
                     WHERE employee_id = ?
                     """,
                     (
                         employee["employee_id"],
                         employee["full_name"],
+                        display_name,
                         employee["username"],
                         phone,
                         email,
-                        "Operations",
-                        "Employee",
+                        department,
+                        designation,
+                        work_location,
+                        joined_on,
+                        manager_name,
+                        employment_type,
                         generate_password_hash(employee["password"]),
                         "Active",
-                        "Employee",
+                        role,
                         employee["bank_account_no"],
                         employee["ifsc_code"],
                         employee["bank_name"],
@@ -1365,17 +1680,22 @@ def init_db():
                 db.execute(
                     """
                     INSERT INTO employees
-                    (employee_id, full_name, username, phone, email, department, designation, password_hash, status, created_at, bank_account_no, ifsc_code, bank_name, monthly_salary, night_shift_allowed, role)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (employee_id, full_name, display_name, username, phone, email, department, designation, work_location, joined_on, manager_name, employment_type, password_hash, status, created_at, bank_account_no, ifsc_code, bank_name, monthly_salary, night_shift_allowed, role)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         employee["employee_id"],
                         employee["full_name"],
+                        display_name,
                         employee["username"],
                         phone,
                         email,
-                        "Operations",
-                        "Employee",
+                        department,
+                        designation,
+                        work_location,
+                        joined_on,
+                        manager_name,
+                        employment_type,
                         generate_password_hash(employee["password"]),
                         "Active",
                         created_at,
@@ -1384,7 +1704,7 @@ def init_db():
                         employee["bank_name"],
                         0,
                         0,
-                        "Employee",
+                        role,
                     ),
                 )
 
@@ -1605,17 +1925,22 @@ def add_employee():
             execute_db(
                 """
                 INSERT INTO employees
-                (employee_id, full_name, username, phone, email, department, designation, password_hash, profile_photo, status, created_at, bank_account_no, ifsc_code, bank_name, monthly_salary, night_shift_allowed, role)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (employee_id, full_name, display_name, username, phone, email, department, designation, work_location, joined_on, manager_name, employment_type, password_hash, profile_photo, status, created_at, bank_account_no, ifsc_code, bank_name, monthly_salary, night_shift_allowed, role)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     fields["employee_id"],
                     fields["full_name"],
+                    fields["display_name"] or fields["full_name"],
                     fields["username"],
                     fields["phone"],
                     fields["email"],
                     fields["department"],
                     fields["designation"],
+                    fields["work_location"] or None,
+                    fields["joined_on"] or None,
+                    fields["manager_name"] or None,
+                    fields["employment_type"] or "Full Time",
                     generate_password_hash(fields["password"]),
                     photo_name,
                     fields["status"],
@@ -1662,17 +1987,22 @@ def edit_employee(id):
             execute_db(
                 """
                 UPDATE employees
-                SET employee_id = ?, full_name = ?, username = ?, phone = ?, email = ?, department = ?, designation = ?, password_hash = ?, profile_photo = ?, status = ?, bank_account_no = ?, ifsc_code = ?, bank_name = ?, monthly_salary = ?, night_shift_allowed = ?, role = ?
+                SET employee_id = ?, full_name = ?, display_name = ?, username = ?, phone = ?, email = ?, department = ?, designation = ?, work_location = ?, joined_on = ?, manager_name = ?, employment_type = ?, password_hash = ?, profile_photo = ?, status = ?, bank_account_no = ?, ifsc_code = ?, bank_name = ?, monthly_salary = ?, night_shift_allowed = ?, role = ?
                 WHERE id = ?
                 """,
                 (
                     fields["employee_id"],
                     fields["full_name"],
+                    fields["display_name"] or fields["full_name"],
                     fields["username"],
                     fields["phone"],
                     fields["email"],
                     fields["department"],
                     fields["designation"],
+                    fields["work_location"] or None,
+                    fields["joined_on"] or None,
+                    fields["manager_name"] or None,
+                    fields["employment_type"] or "Full Time",
                     password_hash,
                     final_photo,
                     fields["status"],

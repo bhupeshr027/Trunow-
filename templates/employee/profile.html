@@ -5,7 +5,7 @@
     <div class="row g-4">
         <div class="col-lg-4">
             <img class="avatar-preview mb-3" style="width:120px; height:120px;" src="{{ url_for('static', filename='uploads/profiles/' ~ employee.profile_photo) if employee.profile_photo else url_for('static', filename='images/logo-tt.jpg') }}" alt="{{ employee.full_name }}">
-            <h4>{{ employee.full_name }}</h4>
+            <h4>{{ employee.display_name or employee.full_name }}</h4>
             <p class="mini-muted">{{ employee.designation }}</p>
         </div>
         <div class="col-lg-8">
@@ -31,8 +31,28 @@
                     <input class="form-control" value="{{ employee.role or employee.designation }}" readonly>
                 </div>
                 <div class="col-md-6">
+                    <label class="form-label">Work Location</label>
+                    <input class="form-control" value="{{ employee.work_location or '' }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Employment Type</label>
+                    <input class="form-control" value="{{ employee.employment_type or '' }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Joined On</label>
+                    <input class="form-control" value="{{ employee.joined_on or '' }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Manager Name</label>
+                    <input class="form-control" value="{{ employee.manager_name or '' }}" readonly>
+                </div>
+                <div class="col-md-6">
                     <label class="form-label">Monthly Salary</label>
                     <input class="form-control" value="{{ employee.monthly_salary or 0 }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Display Name</label>
+                    <input class="form-control" value="{{ employee.display_name or employee.full_name }}" readonly>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Night Shift Access</label>

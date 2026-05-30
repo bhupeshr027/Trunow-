@@ -20,6 +20,10 @@
                 <input class="form-control" name="full_name" value="{{ employee.full_name if employee else '' }}" required>
             </div>
             <div class="col-md-4">
+                <label class="form-label">Display Name</label>
+                <input class="form-control" name="display_name" value="{{ employee.display_name if employee else '' }}">
+            </div>
+            <div class="col-md-4">
                 <label class="form-label">Username</label>
                 <input class="form-control" name="username" value="{{ employee.username if employee else '' }}" required>
             </div>
@@ -42,6 +46,22 @@
             <div class="col-md-4">
                 <label class="form-label">Role</label>
                 <input class="form-control" name="role" value="{{ employee.role if employee else 'Employee' }}" required>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Work Location</label>
+                <input class="form-control" name="work_location" value="{{ employee.work_location if employee else '' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Employment Type</label>
+                <input class="form-control" name="employment_type" value="{{ employee.employment_type if employee else 'Full Time' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Joined On</label>
+                <input type="date" class="form-control" name="joined_on" value="{{ employee.joined_on if employee else '' }}">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Manager Name</label>
+                <input class="form-control" name="manager_name" value="{{ employee.manager_name if employee else '' }}">
             </div>
             <div class="col-md-4">
                 <label class="form-label">Monthly Salary</label>
