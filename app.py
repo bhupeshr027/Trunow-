@@ -346,8 +346,9 @@ EMPLOYEE_SEED_DATA = [
 
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(DATABASE)
+        g.db = sqlite3.connect(DATABASE, timeout=10)
         g.db.row_factory = sqlite3.Row
+        g.db.execute("PRAGMA foreign_keys = ON")
     return g.db
 
 
@@ -369,6 +370,7 @@ def execute_db(query, args=()):
     db = get_db()
     cur = db.execute(query, args)
     db.commit()
+    cur.close()
     return cur
 
 
@@ -518,6 +520,81 @@ def ensure_attendance_columns(db):
     for column_name, column_type in required_columns.items():
         if column_name not in existing_columns:
             db.execute(f"ALTER TABLE attendance ADD COLUMN {column_name} {column_type}")
+
+
+def ensure_attendance_summary_table(db):
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS attendance_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id INTEGER NOT NULL,
+            month TEXT NOT NULL,
+            total_present INTEGER DEFAULT 0,
+            total_absent INTEGER DEFAULT 0,
+            total_leave INTEGER DEFAULT 0,
+            sunday_worked INTEGER DEFAULT 0,
+            salary_deduction_days INTEGER DEFAULT 0,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(employee_id, month),
+            FOREIGN KEY(employee_id) REFERENCES employees(id)
+        )
+        """
+    )
+
+
+def deduplicate_attendance_rows(db):
+    duplicate_groups = db.execute(
+        """
+        SELECT employee_id, date, MAX(id) AS keep_id
+        FROM attendance
+        GROUP BY employee_id, date
+        HAVING COUNT(*) > 1
+        """
+    ).fetchall()
+    for duplicate_group in duplicate_groups:
+        db.execute(
+            """
+            DELETE FROM attendance
+            WHERE employee_id = ? AND date = ? AND id != ?
+            """,
+            (
+                duplicate_group["employee_id"],
+                duplicate_group["date"],
+                duplicate_group["keep_id"],
+            ),
+        )
+
+
+def ensure_attendance_indexes(db):
+    deduplicate_attendance_rows(db)
+    db.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_attendance_employee_date
+        ON attendance(employee_id, date)
+        """
+    )
+
+
+def find_employee_conflict(fields, exclude_employee_id=None):
+    checks = [
+        ("employee_id", "Employee ID"),
+        ("username", "Username"),
+        ("phone", "Phone number"),
+        ("email", "Email"),
+    ]
+    for field_name, label in checks:
+        value = fields.get(field_name)
+        if not value:
+            continue
+        query = f"SELECT id FROM employees WHERE {field_name} = ?"
+        args = [value]
+        if exclude_employee_id is not None:
+            query += " AND id != ?"
+            args.append(exclude_employee_id)
+        existing = query_db(query, tuple(args), one=True)
+        if existing:
+            return f"{label} already exists."
+    return None
 
 
 
@@ -781,12 +858,12 @@ def apply_monthly_compensation_flags(employee_id, month, year):
 def calculate_leave_and_salary_cut(employee_id, month, year):
     apply_monthly_compensation_flags(employee_id, month, year)
     summary = calculate_employee_monthly_attendance(employee_id, month, year)
-    allowed_leave = 1
+    allowed_leave = 1 + summary["sunday_work_count"]
     total_leaves_taken = summary["leave_days"]
     sunday_work_count = summary["sunday_work_count"]
-    extra_leave = max(0, total_leaves_taken - allowed_leave)
+    extra_leave = max(0, total_leaves_taken - 1)
     compensated_leave = min(extra_leave, sunday_work_count)
-    salary_cut_days = extra_leave - compensated_leave
+    salary_cut_days = max(0, total_leaves_taken - allowed_leave)
     employee = query_db("SELECT monthly_salary FROM employees WHERE id = ?", (employee_id,), one=True)
     monthly_salary = float(employee["monthly_salary"] or 0) if employee else 0.0
     total_working_days = max(1, summary["total_working_days"])
@@ -869,13 +946,14 @@ def calculate_leave_and_salary_cut_range(employee_id, start_date, end_date):
         month_start = max(start_date, date(year, month, 1).isoformat())
         month_end = min(end_date, date(year, month, calendar.monthrange(year, month)[1]).isoformat())
         month_summary = calculate_employee_attendance_range(employee_id, month_start, month_end)
-        month_allowed_leave = 1
-        month_extra_leave = max(0, month_summary["leave_days"] - month_allowed_leave)
+        month_allowed_leave = 1 + month_summary["sunday_work_count"]
+        month_extra_leave = max(0, month_summary["leave_days"] - 1)
         month_compensated = min(month_extra_leave, month_summary["sunday_work_count"])
         allowed_leave += month_allowed_leave
         compensated_leave += month_compensated
-        salary_cut_days += month_extra_leave - month_compensated
+        salary_cut_days += max(0, month_summary["leave_days"] - month_allowed_leave)
     sunday_work_count = summary["sunday_work_count"]
+    extra_leave = max(0, total_leaves_taken - allowed_leave)
     employee = query_db("SELECT monthly_salary FROM employees WHERE id = ?", (employee_id,), one=True)
     monthly_salary = float(employee["monthly_salary"] or 0) if employee else 0.0
     total_working_days = max(1, summary["total_working_days"])
@@ -941,6 +1019,46 @@ def upsert_monthly_salary_report(employee_id, month, year, report_data):
             ist_now().strftime("%Y-%m-%d %H:%M:%S"),
         ),
     )
+
+
+def refresh_attendance_summary(employee_id, month, year, report_data=None):
+    summary_month = f"{year:04d}-{month:02d}"
+    if report_data is None:
+        report_data = calculate_leave_and_salary_cut(employee_id, month, year)
+    execute_db(
+        """
+        INSERT INTO attendance_summary
+        (
+            employee_id, month, total_present, total_absent, total_leave,
+            sunday_worked, salary_deduction_days, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(employee_id, month) DO UPDATE SET
+            total_present = excluded.total_present,
+            total_absent = excluded.total_absent,
+            total_leave = excluded.total_leave,
+            sunday_worked = excluded.sunday_worked,
+            salary_deduction_days = excluded.salary_deduction_days,
+            updated_at = excluded.updated_at
+        """,
+        (
+            employee_id,
+            summary_month,
+            report_data["present_days"],
+            report_data["absent_days"],
+            report_data["leave_days"],
+            report_data["sunday_work_count"],
+            report_data["salary_cut_days"],
+            ist_now().strftime("%Y-%m-%d %H:%M:%S"),
+        ),
+    )
+
+
+def sync_employee_month_artifacts(employee_id, target_date):
+    target_day = datetime.strptime(target_date, "%Y-%m-%d").date()
+    report_data = calculate_leave_and_salary_cut(employee_id, target_day.month, target_day.year)
+    upsert_monthly_salary_report(employee_id, target_day.month, target_day.year, report_data)
+    refresh_attendance_summary(employee_id, target_day.month, target_day.year, report_data)
 
 
 def monthly_export_rows(month, year):
@@ -1583,17 +1701,21 @@ def init_db():
     """
     with closing(sqlite3.connect(DATABASE)) as db:
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA foreign_keys = ON")
         db.executescript(schema)
         ensure_employee_bank_columns(db)
         ensure_employee_profile_columns(db)
         ensure_employee_attendance_columns(db)
         ensure_attendance_columns(db)
+        ensure_attendance_summary_table(db)
+        ensure_attendance_indexes(db)
         migrate_attendance_data(db)
         ensure_leave_and_salary_tables(db)
         db.commit()
 
     with closing(sqlite3.connect(DATABASE)) as db:
         db.row_factory = sqlite3.Row
+        db.execute("PRAGMA foreign_keys = ON")
         admin = db.execute("SELECT id FROM admins ORDER BY id LIMIT 1").fetchone()
         if not admin:
             db.execute(
@@ -1604,35 +1726,8 @@ def init_db():
                     ist_now().strftime("%Y-%m-%d %H:%M:%S"),
                 ),
             )
-        else:
-            db.execute(
-                "UPDATE admins SET username = ?, password_hash = ? WHERE id = ?",
-                (
-                    "TRUNOW ADMIN",
-                    generate_password_hash("Admin123@"),
-                    admin["id"],
-                ),
-            )
 
         created_at = ist_now().strftime("%Y-%m-%d %H:%M:%S")
-        seed_employee_ids = [employee["employee_id"] for employee in EMPLOYEE_SEED_DATA]
-        removed_employee_rows = db.execute(
-            f"SELECT id, full_name FROM employees WHERE employee_id NOT IN ({','.join(['?'] * len(seed_employee_ids))})",
-            tuple(seed_employee_ids),
-        ).fetchall()
-        if removed_employee_rows:
-            removed_ids = tuple(row["id"] for row in removed_employee_rows)
-            placeholders = ",".join(["?"] * len(removed_ids))
-            db.execute(f"DELETE FROM attendance WHERE employee_id IN ({placeholders})", removed_ids)
-            db.execute(f"DELETE FROM leave_requests WHERE employee_id IN ({placeholders})", removed_ids)
-            db.execute(f"DELETE FROM monthly_salary_report WHERE employee_id IN ({placeholders})", removed_ids)
-            db.execute(f"DELETE FROM tasks WHERE assigned_to IN ({placeholders})", removed_ids)
-            db.execute(
-                f"DELETE FROM activity_logs WHERE user_type = 'employee' AND user_id IN ({placeholders})",
-                removed_ids,
-            )
-            db.execute(f"DELETE FROM employees WHERE id IN ({placeholders})", removed_ids)
-
         for index, employee in enumerate(EMPLOYEE_SEED_DATA, start=1):
             phone = employee.get("phone") or f"900000{index:04d}"
             email = employee.get("email") or f"{employee['username']}@trunowindia.com"
@@ -1647,36 +1742,7 @@ def init_db():
             existing_employee = db.execute(
                 "SELECT id FROM employees WHERE employee_id = ?", (employee["employee_id"],)
             ).fetchone()
-            if existing_employee:
-                db.execute(
-                    """
-                    UPDATE employees
-                    SET employee_id = ?, full_name = ?, display_name = ?, username = ?, phone = ?, email = ?, department = ?, designation = ?, work_location = ?, joined_on = ?, manager_name = ?, employment_type = ?, password_hash = ?, status = ?, role = ?, monthly_salary = COALESCE(monthly_salary, 0), night_shift_allowed = COALESCE(night_shift_allowed, 0), bank_account_no = ?, ifsc_code = ?, bank_name = ?
-                    WHERE employee_id = ?
-                    """,
-                    (
-                        employee["employee_id"],
-                        employee["full_name"],
-                        display_name,
-                        employee["username"],
-                        phone,
-                        email,
-                        department,
-                        designation,
-                        work_location,
-                        joined_on,
-                        manager_name,
-                        employment_type,
-                        generate_password_hash(employee["password"]),
-                        "Active",
-                        role,
-                        employee["bank_account_no"],
-                        employee["ifsc_code"],
-                        employee["bank_name"],
-                        employee["employee_id"],
-                    ),
-                )
-            else:
+            if not existing_employee:
                 db.execute(
                     """
                     INSERT INTO employees
@@ -1822,23 +1888,28 @@ def employee_login():
         identifier = request.form.get("identifier", "").strip()
         password = request.form.get("password", "").strip()
         if not identifier or not password:
-            flash("Username or phone and password are required.", "danger")
+            flash("Username, phone, or email and password are required.", "danger")
             return render_template("employee_login.html")
 
         employee = query_db(
-            "SELECT * FROM employees WHERE username = ? OR phone = ?",
-            (identifier, identifier),
+            """
+            SELECT *
+            FROM employees
+            WHERE username = ? OR phone = ? OR lower(email) = lower(?)
+            """,
+            (identifier, identifier, identifier),
             one=True,
         )
-        if employee and check_password_hash(employee["password_hash"], password):
+        if employee and employee["status"] == "Active" and check_password_hash(employee["password_hash"], password):
             session.clear()
             session["user_type"] = "employee"
             session["user_id"] = employee["id"]
+            session["employee_id"] = employee["id"]
             session["username"] = employee["username"]
             log_activity("employee", employee["id"], "Logged into employee portal")
             return redirect(url_for("employee_dashboard"))
 
-        flash("Invalid employee credentials.", "danger")
+        flash("Invalid username or password.", "danger")
     return render_template("employee_login.html")
 
 
@@ -1919,6 +1990,10 @@ def add_employee():
         if bank_error:
             flash(bank_error, "danger")
             return render_template("admin/add_employee.html", employee=fields)
+        conflict_error = find_employee_conflict(fields)
+        if conflict_error:
+            flash(conflict_error, "danger")
+            return render_template("admin/add_employee.html", employee=fields)
 
         photo_name = save_uploaded_file(request.files.get("profile_photo"), PROFILE_UPLOAD)
         try:
@@ -1954,7 +2029,7 @@ def add_employee():
                 ),
             )
             log_activity("admin", session["user_id"], f"Added employee {fields['full_name']}")
-            flash("Employee added successfully.", "success")
+            flash("Employee added successfully. Credentials created successfully.", "success")
             return redirect(url_for("admin_employees"))
         except sqlite3.IntegrityError:
             flash("Employee ID, username, phone, or email already exists.", "danger")
@@ -1977,6 +2052,10 @@ def edit_employee(id):
         bank_error = validate_employee_bank_fields(fields)
         if bank_error:
             flash(bank_error, "danger")
+            return render_template("admin/add_employee.html", employee=fields, edit_mode=True, employee_row=employee)
+        conflict_error = find_employee_conflict(fields, exclude_employee_id=id)
+        if conflict_error:
+            flash(conflict_error, "danger")
             return render_template("admin/add_employee.html", employee=fields, edit_mode=True, employee_row=employee)
 
         photo_name = save_uploaded_file(request.files.get("profile_photo"), PROFILE_UPLOAD)
@@ -2087,70 +2166,77 @@ def admin_attendance():
                 (employee_id, record_date),
                 one=True,
             )
-            if existing_record:
-                execute_db(
-                    """
-                    UPDATE attendance
-                    SET day_name = ?, morning_status = ?, night_status = ?, clock_in_time = ?, clock_out_time = ?,
-                        night_check_in_time = ?, night_check_out_time = ?, location_text = ?, remarks = ?,
-                        approval_status = ?, admin_approval_status = ?, is_sunday_work = ?, is_compensated_leave = ?,
-                        salary_cut_status = ?, status = ?
-                    WHERE id = ?
-                    """,
-                    (
-                        day_name,
-                        morning_status,
-                        night_status,
-                        final_check_in,
-                        final_check_out,
-                        final_night_in,
-                        final_night_out,
-                        final_location,
-                        remarks or None,
-                        approval_status,
-                        approval_status,
-                        is_sunday_work_value,
-                        is_compensated_leave,
-                        1 if (morning_status == "Leave" and not is_compensated_leave) else 0,
-                        morning_status,
-                        existing_record["id"],
-                    ),
-                )
-            else:
-                execute_db(
-                    """
-                    INSERT INTO attendance
-                    (
-                        employee_id, date, day_name, morning_status, night_status, clock_in_time, clock_out_time,
-                        night_check_in_time, night_check_out_time, location_text, remarks, approval_status,
-                        admin_approval_status, is_sunday_work, is_compensated_leave, salary_cut_status,
-                        status, created_at
+            try:
+                if existing_record:
+                    execute_db(
+                        """
+                        UPDATE attendance
+                        SET day_name = ?, morning_status = ?, night_status = ?, clock_in_time = ?, clock_out_time = ?,
+                            night_check_in_time = ?, night_check_out_time = ?, location_text = ?, remarks = ?,
+                            approval_status = ?, admin_approval_status = ?, is_sunday_work = ?, is_compensated_leave = ?,
+                            salary_cut_status = ?, status = ?
+                        WHERE id = ?
+                        """,
+                        (
+                            day_name,
+                            morning_status,
+                            night_status,
+                            final_check_in,
+                            final_check_out,
+                            final_night_in,
+                            final_night_out,
+                            final_location,
+                            remarks or None,
+                            approval_status,
+                            approval_status,
+                            is_sunday_work_value,
+                            is_compensated_leave,
+                            1 if (morning_status == "Leave" and not is_compensated_leave) else 0,
+                            morning_status,
+                            existing_record["id"],
+                        ),
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        employee_id,
-                        record_date,
-                        day_name,
-                        morning_status,
-                        night_status,
-                        final_check_in,
-                        final_check_out,
-                        final_night_in,
-                        final_night_out,
-                        final_location,
-                        remarks or None,
-                        approval_status,
-                        approval_status,
-                        is_sunday_work_value,
-                        is_compensated_leave,
-                        1 if (morning_status == "Leave" and not is_compensated_leave) else 0,
-                        morning_status,
-                        ist_now().strftime("%Y-%m-%d %H:%M:%S"),
-                    ),
-                )
-            log_activity("admin", session["user_id"], f"Saved attendance for employee #{employee_id} on {record_date}")
-            flash("Attendance record saved successfully.", "success")
+                else:
+                    execute_db(
+                        """
+                        INSERT INTO attendance
+                        (
+                            employee_id, date, day_name, morning_status, night_status, clock_in_time, clock_out_time,
+                            night_check_in_time, night_check_out_time, location_text, remarks, approval_status,
+                            admin_approval_status, is_sunday_work, is_compensated_leave, salary_cut_status,
+                            status, created_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            employee_id,
+                            record_date,
+                            day_name,
+                            morning_status,
+                            night_status,
+                            final_check_in,
+                            final_check_out,
+                            final_night_in,
+                            final_night_out,
+                            final_location,
+                            remarks or None,
+                            approval_status,
+                            approval_status,
+                            is_sunday_work_value,
+                            is_compensated_leave,
+                            1 if (morning_status == "Leave" and not is_compensated_leave) else 0,
+                            morning_status,
+                            ist_now().strftime("%Y-%m-%d %H:%M:%S"),
+                        ),
+                    )
+                sync_employee_month_artifacts(int(employee_id), record_date)
+                log_activity("admin", session["user_id"], f"Saved attendance for employee #{employee_id} on {record_date}")
+                flash("Attendance marked successfully.", "success")
+            except sqlite3.IntegrityError:
+                flash("Attendance already marked for today.", "warning")
+            except Exception:
+                app.logger.exception("Admin attendance save failed")
+                flash("Unable to save attendance right now. Please try again.", "danger")
             return redirect(url_for("admin_attendance"))
 
         if action == "review_attendance":
@@ -2164,6 +2250,9 @@ def admin_attendance():
                 "UPDATE attendance SET approval_status = ?, admin_approval_status = ?, remarks = COALESCE(?, remarks) WHERE id = ?",
                 (approval_status, approval_status, remarks or None, attendance_id),
             )
+            attendance_record = query_db("SELECT employee_id, date FROM attendance WHERE id = ?", (attendance_id,), one=True)
+            if attendance_record:
+                sync_employee_month_artifacts(attendance_record["employee_id"], attendance_record["date"])
             flash("Attendance approval updated.", "success")
             return redirect(url_for("admin_attendance"))
 
@@ -2227,6 +2316,7 @@ def admin_attendance():
                             ist_now().strftime("%Y-%m-%d %H:%M:%S"),
                         ),
                     )
+                sync_employee_month_artifacts(leave_request["employee_id"], leave_request["leave_date"])
             flash("Leave request updated.", "success")
             return redirect(url_for("admin_attendance"))
 
@@ -2323,6 +2413,14 @@ def admin_attendance():
     absent_today = 0 if is_sunday(today) else max(0, total_employees - present_today - leave_today)
 
     if request.args.get("export") == "excel":
+        export_start_date = selected_from_date or date(ist_today().year, ist_today().month, 1).isoformat()
+        export_end_date = selected_to_date or today
+        summary_cache = {}
+        for row in attendance_rows:
+            summary_cache.setdefault(
+                row["employee_id"],
+                calculate_leave_and_salary_cut_range(row["employee_id"], export_start_date, export_end_date),
+            )
         output = StringIO()
         writer = csv.writer(output)
         writer.writerow(
@@ -2342,9 +2440,15 @@ def admin_attendance():
                 "Remarks",
                 "Status",
                 "Approval",
+                "Present",
+                "Absent",
+                "Leave",
+                "Sunday Worked",
+                "Salary Deduction Days",
             ]
         )
         for row in attendance_rows:
+            summary = summary_cache[row["employee_id"]]
             writer.writerow(
                 [
                     row["full_name"],
@@ -2362,6 +2466,11 @@ def admin_attendance():
                     row["remarks"],
                     row["status_code"],
                     row["approval_status"],
+                    summary["present_days"],
+                    summary["absent_days"],
+                    summary["leave_days"],
+                    summary["sunday_work_count"],
+                    summary["salary_cut_days"],
                 ]
             )
         headers = [
@@ -2380,10 +2489,15 @@ def admin_attendance():
             "Remarks",
             "Status",
             "Approval",
+            "Present",
+            "Absent",
+            "Leave",
+            "Sunday Worked",
+            "Salary Deduction Days",
         ]
-        excel_rows = [list(row) for row in []]
         excel_rows = []
         for row in attendance_rows:
+            summary = summary_cache[row["employee_id"]]
             excel_rows.append(
                 [
                     row["full_name"],
@@ -2401,6 +2515,11 @@ def admin_attendance():
                     row["remarks"] or "",
                     row["status_code"],
                     row["approval_status"],
+                    summary["present_days"],
+                    summary["absent_days"],
+                    summary["leave_days"],
+                    summary["sunday_work_count"],
+                    summary["salary_cut_days"],
                 ]
             )
         workbook = build_excel_workbook(
@@ -2875,114 +2994,124 @@ def employee_attendance():
         now_time = ist_now().strftime("%H:%M:%S")
         current_stamp = ist_now().strftime("%Y-%m-%d %H:%M:%S")
         today_day_name = get_day_name(today)
-        if action_type == "morning_clock_in":
-            if attendance_today and attendance_today["clock_in_time"]:
-                flash("You have already marked morning attendance today.", "warning")
-            else:
-                if attendance_today:
-                    execute_db(
-                        """
-                        UPDATE attendance
-                        SET day_name = ?, morning_status = 'Present', clock_in_time = ?, latitude = ?, longitude = ?,
-                            location_text = ?, photo = COALESCE(?, photo), status = 'Present',
-                            approval_status = 'Pending', admin_approval_status = 'Pending', is_sunday_work = ?
-                        WHERE id = ?
-                        """,
-                        (
-                            today_day_name,
-                            now_time,
-                            latitude,
-                            longitude,
-                            location_text,
-                            photo_name,
-                            1 if is_sunday(today) else 0,
-                            attendance_today["id"],
-                        ),
-                    )
+        try:
+            if action_type == "morning_clock_in":
+                if attendance_today and attendance_today["clock_in_time"]:
+                    flash("Attendance already marked for today.", "warning")
+                else:
+                    if attendance_today:
+                        execute_db(
+                            """
+                            UPDATE attendance
+                            SET day_name = ?, morning_status = 'Present', clock_in_time = ?, latitude = ?, longitude = ?,
+                                location_text = ?, photo = COALESCE(?, photo), status = 'Present',
+                                approval_status = 'Pending', admin_approval_status = 'Pending', is_sunday_work = ?
+                            WHERE id = ?
+                            """,
+                            (
+                                today_day_name,
+                                now_time,
+                                latitude,
+                                longitude,
+                                location_text,
+                                photo_name,
+                                1 if is_sunday(today) else 0,
+                                attendance_today["id"],
+                            ),
+                        )
+                    else:
+                        execute_db(
+                            """
+                            INSERT INTO attendance
+                            (
+                                employee_id, date, day_name, morning_status, night_status, clock_in_time,
+                                latitude, longitude, location_text, photo, status, approval_status,
+                                admin_approval_status, is_sunday_work, created_at
+                            )
+                            VALUES (?, ?, ?, 'Present', 'Not Applicable', ?, ?, ?, ?, ?, 'Present', 'Pending', 'Pending', ?, ?)
+                            """,
+                            (
+                                session["user_id"],
+                                today,
+                                today_day_name,
+                                now_time,
+                                latitude,
+                                longitude,
+                                location_text,
+                                photo_name,
+                                1 if is_sunday(today) else 0,
+                                current_stamp,
+                            ),
+                        )
+                    sync_employee_month_artifacts(session["user_id"], today)
+                    log_activity("employee", session["user_id"], "Marked morning clock-in attendance")
+                    flash("Attendance marked successfully.", "success")
+            elif action_type == "morning_clock_out":
+                if not attendance_today or not attendance_today["clock_in_time"]:
+                    flash("Please complete morning clock-in before clock-out.", "danger")
+                elif attendance_today["clock_out_time"]:
+                    flash("Attendance already marked for today.", "warning")
                 else:
                     execute_db(
                         """
-                        INSERT INTO attendance
-                        (
-                            employee_id, date, day_name, morning_status, night_status, clock_in_time,
-                            latitude, longitude, location_text, photo, status, approval_status,
-                            admin_approval_status, is_sunday_work, created_at
-                        )
-                        VALUES (?, ?, ?, 'Present', 'Not Applicable', ?, ?, ?, ?, ?, 'Present', 'Pending', 'Pending', ?, ?)
+                        UPDATE attendance
+                        SET clock_out_time = ?, latitude = ?, longitude = ?, location_text = ?,
+                            photo = COALESCE(?, photo), approval_status = 'Pending', admin_approval_status = 'Pending'
+                        WHERE id = ?
                         """,
-                        (
-                            session["user_id"],
-                            today,
-                            today_day_name,
-                            now_time,
-                            latitude,
-                            longitude,
-                            location_text,
-                            photo_name,
-                            1 if is_sunday(today) else 0,
-                            current_stamp,
-                        ),
+                        (now_time, latitude, longitude, location_text, photo_name, attendance_today["id"]),
                     )
-                log_activity("employee", session["user_id"], "Marked morning clock-in attendance")
-                flash("Morning clock-in captured successfully.", "success")
-        elif action_type == "morning_clock_out":
-            if not attendance_today or not attendance_today["clock_in_time"]:
-                flash("Please complete morning clock-in before clock-out.", "danger")
-            elif attendance_today["clock_out_time"]:
-                flash("Morning clock-out is already marked for today.", "warning")
+                    sync_employee_month_artifacts(session["user_id"], today)
+                    log_activity("employee", session["user_id"], "Marked morning clock-out attendance")
+                    flash("Attendance marked successfully.", "success")
+            elif action_type == "night_clock_in":
+                if not employee["night_shift_allowed"]:
+                    flash("Night shift is not enabled for your profile.", "danger")
+                elif attendance_today and attendance_today["night_check_in_time"]:
+                    flash("Attendance already marked for today.", "warning")
+                elif not attendance_today or attendance_today["morning_status"] != "Present":
+                    flash("Morning attendance must be marked before starting night shift.", "danger")
+                else:
+                    execute_db(
+                        """
+                        UPDATE attendance
+                        SET night_status = 'Present', night_check_in_time = ?, latitude = ?, longitude = ?,
+                            location_text = ?, photo = COALESCE(?, photo), approval_status = 'Pending',
+                            admin_approval_status = 'Pending'
+                        WHERE id = ?
+                        """,
+                        (now_time, latitude, longitude, location_text, photo_name, attendance_today["id"]),
+                    )
+                    sync_employee_month_artifacts(session["user_id"], today)
+                    log_activity("employee", session["user_id"], "Marked night shift clock-in")
+                    flash("Attendance marked successfully.", "success")
+            elif action_type == "night_clock_out":
+                if not employee["night_shift_allowed"]:
+                    flash("Night shift is not enabled for your profile.", "danger")
+                elif not attendance_today or not attendance_today["night_check_in_time"]:
+                    flash("Please mark night shift clock-in first.", "danger")
+                elif attendance_today["night_check_out_time"]:
+                    flash("Attendance already marked for today.", "warning")
+                else:
+                    execute_db(
+                        """
+                        UPDATE attendance
+                        SET night_check_out_time = ?, latitude = ?, longitude = ?, location_text = ?,
+                            photo = COALESCE(?, photo), approval_status = 'Pending', admin_approval_status = 'Pending'
+                        WHERE id = ?
+                        """,
+                        (now_time, latitude, longitude, location_text, photo_name, attendance_today["id"]),
+                    )
+                    sync_employee_month_artifacts(session["user_id"], today)
+                    log_activity("employee", session["user_id"], "Marked night shift clock-out")
+                    flash("Attendance marked successfully.", "success")
             else:
-                execute_db(
-                    """
-                    UPDATE attendance
-                    SET clock_out_time = ?, latitude = ?, longitude = ?, location_text = ?,
-                        photo = COALESCE(?, photo), approval_status = 'Pending', admin_approval_status = 'Pending'
-                    WHERE id = ?
-                    """,
-                    (now_time, latitude, longitude, location_text, photo_name, attendance_today["id"]),
-                )
-                log_activity("employee", session["user_id"], "Marked morning clock-out attendance")
-                flash("Morning clock-out captured successfully.", "success")
-        elif action_type == "night_clock_in":
-            if not employee["night_shift_allowed"]:
-                flash("Night shift is not enabled for your profile.", "danger")
-            elif attendance_today and attendance_today["night_check_in_time"]:
-                flash("Night shift clock-in is already marked for today.", "warning")
-            elif not attendance_today or attendance_today["morning_status"] != "Present":
-                flash("Morning attendance must be marked before starting night shift.", "danger")
-            else:
-                execute_db(
-                    """
-                    UPDATE attendance
-                    SET night_status = 'Present', night_check_in_time = ?, latitude = ?, longitude = ?,
-                        location_text = ?, photo = COALESCE(?, photo), approval_status = 'Pending',
-                        admin_approval_status = 'Pending'
-                    WHERE id = ?
-                    """,
-                    (now_time, latitude, longitude, location_text, photo_name, attendance_today["id"]),
-                )
-                log_activity("employee", session["user_id"], "Marked night shift clock-in")
-                flash("Night shift clock-in captured successfully.", "success")
-        elif action_type == "night_clock_out":
-            if not employee["night_shift_allowed"]:
-                flash("Night shift is not enabled for your profile.", "danger")
-            elif not attendance_today or not attendance_today["night_check_in_time"]:
-                flash("Please mark night shift clock-in first.", "danger")
-            elif attendance_today["night_check_out_time"]:
-                flash("Night shift clock-out is already marked for today.", "warning")
-            else:
-                execute_db(
-                    """
-                    UPDATE attendance
-                    SET night_check_out_time = ?, latitude = ?, longitude = ?, location_text = ?,
-                        photo = COALESCE(?, photo), approval_status = 'Pending', admin_approval_status = 'Pending'
-                    WHERE id = ?
-                    """,
-                    (now_time, latitude, longitude, location_text, photo_name, attendance_today["id"]),
-                )
-                log_activity("employee", session["user_id"], "Marked night shift clock-out")
-                flash("Night shift clock-out captured successfully.", "success")
-        else:
-            flash("Invalid attendance action.", "danger")
+                flash("Invalid attendance action.", "danger")
+        except sqlite3.IntegrityError:
+            flash("Attendance already marked for today.", "warning")
+        except Exception:
+            app.logger.exception("Employee attendance save failed")
+            flash("Unable to save attendance right now. Please try again.", "danger")
         return redirect(url_for("employee_attendance"))
 
     attendance_history = [dict(row) for row in query_db(
@@ -3117,4 +3246,4 @@ init_db()
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", "").lower() in {"1", "true", "yes"})
